@@ -97,21 +97,23 @@ sub DV_check_Changes
   my $version = $self->dist_version;
 
   # Read the Changes file and find the line for dist_version:
-  open(my $changes, '<', $file) or die "Can't open $file: $!";
+  open(my $Changes, '<', $file) or die "Can't open $file: $!";
 
   my $release_date;
 
-  while (<$changes>) {
-    if (/^\Q$version\E\s*(.+)/o) {
-      $release_date = $1;
+  while (<$Changes>) {
+    if (/^\s*(\d[\d._]*)\s+(.+)/) {
+      die "$file begins with version $1, expected version $version"
+          unless $1 eq $version;
+      $release_date = $2;
       last;
     } # end if found our dist_version in Changes
   } # end while more lines in Changes
 
-  close $changes;
+  close $Changes;
 
   # Report the results:
-  die "Can't find version $version in $file" unless $release_date;
+  die "Can't find any versions in $file" unless $release_date;
 
   print "Version $version released $release_date\n";
 
