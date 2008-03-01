@@ -1,0 +1,35 @@
+$$Id$
+Module::Build::DistVersion version $%v%$
+
+[ REPLACE THIS...
+
+  The README is used to introduce the module and provide instructions on
+  how to install the module, any machine dependencies it may have (for
+  example C compilers and installed libraries) and any other information
+  that should be understood before the module is installed.
+]
+
+
+
+INSTALLATION
+
+To install this module, run the following commands:
+
+	perl Build.PL
+	./Build
+	./Build test
+	./Build install
+
+
+DEPENDENCIES
+
+None.
+
+
+
+COPYRIGHT AND LICENSE
+
+Copyright 2008 Christopher J. Madsen
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
