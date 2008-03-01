@@ -48,9 +48,9 @@ sub ACTION_distdir
 
   $self->SUPER::ACTION_distdir(@_);
 
-  $self->DV_process_README;
+  my ($release_date, $changes) = $self->DV_check_Changes;
 
-  my $release_date = $self->DV_check_Changes;
+  $self->DV_process_README($release_date, $changes);
 
   $self->DV_update_pod_versions($release_date);
 } # end ACTION_distdir
@@ -60,7 +60,7 @@ sub ACTION_distdir
 
 sub DV_process_README
 {
-  my ($self) = @_;
+  my ($self, $release_date, $changes) = @_;
 
   my $out = File::Spec->catfile($self->dist_dir, 'README');
   print "Updating $out\n";
@@ -75,6 +75,8 @@ sub DV_process_README
   while (<$inFile>) {
     next if /^\$\$/;            # $$ indicates comment
     s/\$\%v\%\$/ $self->dist_version /ge;
+    s/\$\%d\%\$/ $release_date /ge;
+    s/\$\%Changes\%\$/ $changes /ge;
 
     print $outFile $_;
   } # end while $in
@@ -99,15 +101,23 @@ sub DV_check_Changes
   # Read the Changes file and find the line for dist_version:
   open(my $Changes, '<', $file) or die "Can't open $file: $!";
 
-  my $release_date;
+  my ($release_date, $text);
 
   while (<$Changes>) {
-    if (/^\s*(\d[\d._]*)\s+(.+)/) {
+    if (/^(\d[\d._]*)\s+(.+)/) {
       die "$file begins with version $1, expected version $version"
           unless $1 eq $version;
       $release_date = $2;
+      $text = '';
+      while (<$Changes>) {
+        last if /^\S/;
+        $text .= $_;
+      }
+      $text =~ s/\s+\z//;       # Remove all trailing whitespace
+      die "$file contains no history for version $version"
+          unless length($text);
       last;
-    } # end if found our dist_version in Changes
+    } # end if found the first version in Changes
   } # end while more lines in Changes
 
   close $Changes;
@@ -115,9 +125,9 @@ sub DV_check_Changes
   # Report the results:
   die "Can't find any versions in $file" unless $release_date;
 
-  print "Version $version released $release_date\n";
+  print "Version $version released $release_date\n$text\n";
 
-  return $release_date;
+  return ($release_date, $text);
 } # end DV_check_Changes
 
 #---------------------------------------------------------------------
