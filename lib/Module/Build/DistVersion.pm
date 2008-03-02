@@ -108,7 +108,7 @@ sub DV_check_Changes
   my $version = $self->dist_version;
 
   # Read the Changes file and find the line for dist_version:
-  open(my $Changes, '<', $file) or die "Can't open $file: $!";
+  open(my $Changes, '<:utf8', $file) or die "Can't open $file: $!";
 
   my ($release_date, $text);
 
@@ -150,16 +150,34 @@ sub DV_update_pod_versions
   my $pmRef = $self->rscan_dir(File::Spec->catdir($self->dist_dir, 'lib'),
                                qr/\.pm$/);
 
-  my $release = $release_date;
+  # Prepare a Template Toolkit processor:
+  my %data = (
+    date         => $release_date,
+    dist         => $self->dist_name,
+    dist_version => $self->dist_version,
+  );
 
-  if (@$pmRef > 1) {
-    $release .= sprintf(' as part of %s version %s',
-                        $self->dist_name, $self->dist_version);
-  } # end if this distribution contains multiple modules
+  my $tt = Template->new({
+    EVAL_PERL    => 1,
+    POST_CHOMP   => 1,
+  });
 
-  # And update each one:
+  # Find the template to use:
+  my $template = $self->notes('DV_pod_VERSION');
+
+  unless (defined $template) {
+    $template = ('This document describes version [%version%]'.
+                 ' of [%module%], released [%date%]');
+
+    $template .= ' as part of [%dist%] version [%dist_version%]'
+        if @$pmRef > 1; # this distribution contains multiple modules
+
+    $template .= '.';
+  } # end if no template specified in notes
+
+  # And update each module:
   foreach my $module (@$pmRef) {
-    $self->DV_update_pod_version($module, $release);
+    $self->DV_update_pod_version($module, $tt, $template, \%data);
   }
 } # end DV_update_pod_versions
 
@@ -168,7 +186,7 @@ sub DV_update_pod_versions
 
 sub DV_update_pod_version
 {
-  my ($self, $pmFile, $release) = @_;
+  my ($self, $pmFile, $tt, $template, $data) = @_;
 
   # Record the old state of the module file:
   my $saveStats = DV_save_file_stats($pmFile);
@@ -201,8 +219,14 @@ sub DV_update_pod_version
     die "$pmFile: Unexpected line $lines[$i]";
   } else {
     print "Updating $pmFile: VERSION $version\n";
-    $lines[$i] = sprintf('This document describes version %s of %s, released %s.',
-                         $version, $pm_info->name, $release);
+
+    $data->{version} = $version;
+    $data->{module}  = $pm_info->name;
+
+    my $output;
+    $tt->process(\$template, $data, \$output);
+
+    $lines[$i] = $output;
   }
 
   untie @lines;
