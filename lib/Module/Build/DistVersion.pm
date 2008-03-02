@@ -18,7 +18,7 @@ package Module::Build::DistVersion;
 # Copy module version numbers to secondary locations at Build distdir
 #---------------------------------------------------------------------
 
-use 5.006;
+use 5.008;
 use warnings;
 use strict;
 use File::Spec ();
@@ -46,11 +46,11 @@ sub ACTION_distdir
 {
   my $self = shift @_;
 
-  $self->SUPER::ACTION_distdir(@_);
-
   my ($release_date, $changes) = $self->DV_check_Changes;
 
-  $self->DV_process_README($release_date, $changes);
+  $self->DV_process_templates($release_date, $changes);
+
+  $self->SUPER::ACTION_distdir(@_);
 
   $self->DV_update_pod_versions($release_date);
 } # end ACTION_distdir
@@ -58,32 +58,41 @@ sub ACTION_distdir
 #---------------------------------------------------------------------
 # Process README, inserting version number & removing comments:
 
-sub DV_process_README
+sub DV_process_templates
 {
   my ($self, $release_date, $changes) = @_;
 
-  my $out = File::Spec->catfile($self->dist_dir, 'README');
-  print "Updating $out\n";
+  require File::Glob;
+  require Template;
 
-  my $saveStats = DV_save_file_stats($out); # Auto-restores
+  my @files = File::Glob::bsd_glob(File::Spec->catfile(qw(tools *.tt)));
 
-  unlink $out or die;
+  my %data = (
+     changes => $changes,
+     date    => $release_date,
+     version => $self->dist_version,
+  );
 
-  open(my $inFile,  '<', 'README') or die;
-  open(my $outFile, '>', $out)     or die;
+  my $tt = Template->new({
+    EVAL_PERL    => 1,
+    POST_CHOMP   => 1,
+  });
 
-  while (<$inFile>) {
-    next if /^\$\$/;            # $$ indicates comment
-    s/\$\%v\%\$/ $self->dist_version /ge;
-    s/\$\%d\%\$/ $release_date /ge;
-    s/\$\%Changes\%\$/ $changes /ge;
+  foreach my $template (@files) {
+    my $outName = (File::Spec->splitpath($template))[2];
 
-    print $outFile $_;
-  } # end while $in
+    $outName =~ s/\.tt$// or die;
 
-  close $inFile;
-  close $outFile;
-} # end DV_process_README
+    open(my $inFile,  '<:utf8', $template) or die "Can't open $template: $!";
+    open(my $outFile, '>:utf8', $outName)  or die "Can't open $outName: $!";
+
+    print "Creating $outName from $template...\n";
+    $tt->process($inFile, \%data, $outFile);
+
+    close $inFile;
+    close $outFile;
+  }
+} # end DV_process_templates
 
 #---------------------------------------------------------------------
 # Make sure that we've listed this release in Changes:
@@ -94,7 +103,7 @@ sub DV_check_Changes
 {
   my ($self) = @_;
 
-  my $file = File::Spec->catfile($self->dist_dir, 'Changes');
+  my $file = 'Changes';
 
   my $version = $self->dist_version;
 
@@ -113,9 +122,9 @@ sub DV_check_Changes
         last if /^\S/;
         $text .= $_;
       }
-      $text =~ s/\s+\z//;       # Remove all trailing whitespace
+      $text =~ s/\s*\z/\n/;     # Normalize trailing whitespace
       die "$file contains no history for version $version"
-          unless length($text);
+          unless length($text) > 1;
       last;
     } # end if found the first version in Changes
   } # end while more lines in Changes

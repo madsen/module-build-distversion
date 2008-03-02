@@ -20,8 +20,10 @@ my $builder = Module::Build::DistVersion->new(
   dist_author         => 'Christopher J. Madsen <perl@cjmweb.net>',
   dist_version_from   => 'lib/Module/Build/DistVersion.pm',
   requires => {
-      perl               => '5.6.0',
+      perl               => '5.8.0',
+      'File::Glob'       => 0,
       'File::Spec'       => 0,
+      'Template'         => 2,
       'Tie::File'        => 0,
       'Module::Build'    => '0.28',
   },
