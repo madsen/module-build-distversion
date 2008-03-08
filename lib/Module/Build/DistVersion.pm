@@ -19,8 +19,8 @@ package Module::Build::DistVersion;
 #---------------------------------------------------------------------
 
 use 5.008;
-use warnings;
 use strict;
+use warnings;
 use File::Spec ();
 use Module::Build 0.28;
 
