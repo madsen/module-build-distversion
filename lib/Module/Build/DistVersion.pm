@@ -83,7 +83,8 @@ sub DV_process_templates
     open(my $outFile, '>:utf8', $outName)  or die "ERROR: Can't open $outName: $!";
 
     print "Creating $outName from $template...\n";
-    $tt->process($inFile, \%data, $outFile);
+    $tt->process($inFile, \%data, $outFile)
+        or die "TEMPLATE ERROR: " . $tt->error;
 
     close $inFile;
     close $outFile;
@@ -227,7 +228,8 @@ sub DV_update_pod_version
     $dataRef->{module}  = $pm_info->name;
 
     my $output;
-    $tt->process(\$template, $dataRef, \$output);
+    $tt->process(\$template, $dataRef, \$output)
+        or die "TEMPLATE ERROR: " . $tt->error;
 
     $lines[$i] = $output;
   }
@@ -240,12 +242,14 @@ sub DV_update_pod_version
 
 sub DV_new_Template
 {
+  my $self = shift;
+
   require Template;
 
-  return Template->new({
-    EVAL_PERL    => 1,
-    POST_CHOMP   => 1,
-  });
+  return Template->new(
+    $self->notes('DV_Template_config')
+    or { EVAL_PERL => 0, POST_CHOMP => 1 }
+  );
 } # end DV_new_Template
 
 #---------------------------------------------------------------------
@@ -415,7 +419,7 @@ The distribution's version number.
 
 =item 3.
 
-Module::Build's normal C<ACTION_distdir> method is run.
+It executes Module::Build's normal C<ACTION_distdir> method.
 
 =item 4.
 
@@ -431,7 +435,7 @@ L<DV_pod_VERSION_template> method.  See that method for details.
 
 =head2 Overriden Module::Build methods
 
-Module::Build::DistVersion overrides the following Module::Build methods:
+Module::Build::DistVersion overrides the following methods of Module::Build:
 
 =over
 
@@ -461,9 +465,11 @@ with C<DV_>.
 
 =item C<< $TT = $builder->DV_new_Template() >>
 
-Creates a new Template object.  You can override this if you want to
-change the parameters passed to it.  The default settings enable
-C<EVAL_PERL> and C<POST_CHOMP>.
+Creates a new Template object.  First, it calls Module::Build's notes
+method with the key C<DV_Template_config>.  If that key is defined,
+its value must be a hash reference containing the Template
+configuration.  Otherwise, it uses the default configuration, which
+enables C<EVAL_PERL> and C<POST_CHOMP>.
 
 =item C<< ($RELEASE_DATE, $CHANGES) = $builder->DV_check_Changes() >>
 
@@ -586,19 +592,50 @@ We couldn't find a C<=head1 VERSION> line in the specified file.
 We found a C<=head1 VERSION> section in the specified file, but the
 next non-blank line didn't match C</^This (?:section|document)/>.
 
+=item C<< TEMPLATE ERROR: %s >>
+
+The specified error occurred during Template Toolkit processing.
+See the L<Template> documentation for more information.
+
 =back
 
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
-=for author to fill in:
-    A full explanation of any configuration system(s) used by the
-    module, including the names and locations of any configuration
-    files, and the meaning of any environment variables or properties
-    that can be set. These descriptions must also include details of any
-    configuration language used.
+All files matching F<tools/*.tt> are assumed to be templates for
+C<DV_process_templates>.
 
-Module::Build::DistVersion requires no configuration files or environment variables.
+Each F<.pm> file in F<lib> should have a VERSION section like this:
+
+  =head1 VERSION
+
+  This section is filled in by C<Build distdir>.
+
+Some settings can be customized by using Module::Build's C<notes>
+feature.  All keys beginning with C<DV_> are reserved by
+Module::Build::DistVersion.  The currently implemented keys are:
+
+=over
+
+=item C<DV_pod_VERSION>
+
+Used by the C<DV_pod_VERSION_template> method.
+
+=item C<DV_Template_config>
+
+Used by the C<DV_new_Template> method.
+
+=back
+
+For example, to customize the Template configuration, you might use
+
+  my $builder = $class->new(
+    ...
+    notes => { DV_Template_config => {
+                 INTERPOLATE => 1, POST_CHOMP => 1
+             } },
+  );
+
 
 
 =head1 DEPENDENCIES
