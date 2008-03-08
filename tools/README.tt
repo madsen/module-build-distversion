@@ -1,5 +1,6 @@
-$$Id$
-Module::Build::DistVersion version $%v%$
+[% # $Id$ %]
+Module::Build::DistVersion version [%version%], released [%date%]
+
 
 [ REPLACE THIS...
 
