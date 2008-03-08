@@ -63,7 +63,6 @@ sub DV_process_templates
   my ($self, $release_date, $changes) = @_;
 
   require File::Glob;
-  require Template;
 
   my @files = File::Glob::bsd_glob(File::Spec->catfile(qw(tools *.tt)));
 
@@ -73,18 +72,15 @@ sub DV_process_templates
      version => $self->dist_version,
   );
 
-  my $tt = Template->new({
-    EVAL_PERL    => 1,
-    POST_CHOMP   => 1,
-  });
+  my $tt = $self->DV_new_Template;
 
   foreach my $template (@files) {
     my $outName = (File::Spec->splitpath($template))[2];
 
     $outName =~ s/\.tt$// or die;
 
-    open(my $inFile,  '<:utf8', $template) or die "Can't open $template: $!";
-    open(my $outFile, '>:utf8', $outName)  or die "Can't open $outName: $!";
+    open(my $inFile,  '<:utf8', $template) or die "ERROR: Can't open $template: $!";
+    open(my $outFile, '>:utf8', $outName)  or die "ERROR: Can't open $outName: $!";
 
     print "Creating $outName from $template...\n";
     $tt->process($inFile, \%data, $outFile);
@@ -97,7 +93,8 @@ sub DV_process_templates
 #---------------------------------------------------------------------
 # Make sure that we've listed this release in Changes:
 #
-# Returns:  The release date from that line
+# Returns:
+#   A list (release_date, change_text)
 
 sub DV_check_Changes
 {
@@ -108,13 +105,13 @@ sub DV_check_Changes
   my $version = $self->dist_version;
 
   # Read the Changes file and find the line for dist_version:
-  open(my $Changes, '<:utf8', $file) or die "Can't open $file: $!";
+  open(my $Changes, '<:utf8', $file) or die "ERROR: Can't open $file: $!";
 
   my ($release_date, $text);
 
   while (<$Changes>) {
     if (/^(\d[\d._]*)\s+(.+)/) {
-      die "$file begins with version $1, expected version $version"
+      die "ERROR: $file begins with version $1, expected version $version"
           unless $1 eq $version;
       $release_date = $2;
       $text = '';
@@ -123,7 +120,7 @@ sub DV_check_Changes
         $text .= $_;
       }
       $text =~ s/\s*\z/\n/;     # Normalize trailing whitespace
-      die "$file contains no history for version $version"
+      die "ERROR: $file contains no history for version $version"
           unless length($text) > 1;
       last;
     } # end if found the first version in Changes
@@ -132,7 +129,7 @@ sub DV_check_Changes
   close $Changes;
 
   # Report the results:
-  die "Can't find any versions in $file" unless $release_date;
+  die "ERROR: Can't find any versions in $file" unless $release_date;
 
   print "Version $version released $release_date\n$text\n";
 
@@ -157,10 +154,19 @@ sub DV_update_pod_versions
     dist_version => $self->dist_version,
   );
 
-  my $tt = Template->new({
-    EVAL_PERL    => 1,
-    POST_CHOMP   => 1,
-  });
+  my $tt       = $self->DV_new_Template;
+  my $template = $self->DV_pod_VERSION_template($pmRef);
+
+  # And update each module:
+  foreach my $module (@$pmRef) {
+    $self->DV_update_pod_version($module, $tt, $template, \%data);
+  }
+} # end DV_update_pod_versions
+
+#---------------------------------------------------------------------
+sub DV_pod_VERSION_template
+{
+  my ($self, $pmFilesRef) = @_;
 
   # Find the template to use:
   my $template = $self->notes('DV_pod_VERSION');
@@ -170,23 +176,20 @@ sub DV_update_pod_versions
                  ' of [%module%], released [%date%]');
 
     $template .= ' as part of [%dist%] version [%dist_version%]'
-        if @$pmRef > 1; # this distribution contains multiple modules
+        if @$pmFilesRef > 1; # this distribution contains multiple modules
 
     $template .= '.';
   } # end if no template specified in notes
 
-  # And update each module:
-  foreach my $module (@$pmRef) {
-    $self->DV_update_pod_version($module, $tt, $template, \%data);
-  }
-} # end DV_update_pod_versions
+  return $template;
+} # end DV_pod_VERSION_template
 
 #---------------------------------------------------------------------
 # Update the VERSION section in a single module:
 
 sub DV_update_pod_version
 {
-  my ($self, $pmFile, $tt, $template, $data) = @_;
+  my ($self, $pmFile, $tt, $template, $dataRef) = @_;
 
   # Record the old state of the module file:
   my $saveStats = DV_save_file_stats($pmFile);
@@ -194,13 +197,13 @@ sub DV_update_pod_version
   chmod 0600, $pmFile;          # Make it writeable
 
   my $pm_info = Module::Build::ModuleInfo->new_from_file($pmFile)
-      or die "Can't open $pmFile to determine version";
+      or die "ERROR: Can't open $pmFile to determine version: $!";
   my $version = $pm_info->version
-      or die "Can't find version in $pmFile";
+      or die "ERROR: Can't find version in $pmFile";
 
   # Open the module file, tying it to an array:
   require Tie::File;
-  tie my @lines, 'Tie::File', $pmFile or die "Can't open $pmFile: $!";
+  tie my @lines, 'Tie::File', $pmFile or die "ERROR: Can't open $pmFile: $!";
 
   my $i = 0;
 
@@ -216,21 +219,34 @@ sub DV_update_pod_version
   if (not defined $lines[$i]) {
     die "ERROR: $pmFile has no VERSION section\n";
   } elsif (not $lines[$i] =~ /^This (?:section|document)/) {
-    die "$pmFile: Unexpected line $lines[$i]";
+    die "ERROR: $pmFile: Unexpected line $lines[$i]";
   } else {
     print "Updating $pmFile: VERSION $version\n";
 
-    $data->{version} = $version;
-    $data->{module}  = $pm_info->name;
+    $dataRef->{version} = $version;
+    $dataRef->{module}  = $pm_info->name;
 
     my $output;
-    $tt->process(\$template, $data, \$output);
+    $tt->process(\$template, $dataRef, \$output);
 
     $lines[$i] = $output;
   }
 
   untie @lines;
 } # end DV_update_pod_version
+
+#---------------------------------------------------------------------
+# Create & return a Template Toolkit processor:
+
+sub DV_new_Template
+{
+  require Template;
+
+  return Template->new({
+    EVAL_PERL    => 1,
+    POST_CHOMP   => 1,
+  });
+} # end DV_new_Template
 
 #---------------------------------------------------------------------
 # Don't let Module::Build::Compat write a Makefile.PL that requires
@@ -263,7 +279,7 @@ sub new
 {
   my ($class, $path) = @_;
 
-  my @stat = stat($path) or die "Can't stat $path: $!";
+  my @stat = stat($path) or die "ERROR: Can't stat $path: $!";
 
   bless {
     path => $path,
@@ -303,49 +319,272 @@ This section is filled in by C<Build distdir>.
 
 =head1 SYNOPSIS
 
-    use Module::Build::DistVersion;
+In F<Build.PL>:
 
-=for author to fill in:
-    Brief code example(s) here showing commonest usage(s).
-    This section will be as far as many users bother reading
-    so make it as educational and exeplary as possible.
+  use Module::Build;
+  eval 'use Module::Build::DistVersion;';
+  my $class = ($@ ? Module::Build->subclass(code => q{
+      sub ACTION_distdir {
+        print STDERR <<"END";
+  \a\a\a\n
+  This module uses Module::Build::DistVersion to automatically copy
+  version numbers to the appropriate places.  You might want to install
+  that and re-run Build.PL if you intend to create a distribution.
+  \n
+  END
+        (shift @_)->SUPER::ACTION_distdir(@_);
+      } })
+               : 'Module::Build::DistVersion'); # if we found it
+  my $builder = $class->new(...);
+  $builder->create_build_script();
+
+or, if you need to subclass Module::Build for other reasons:
+
+  package My_Custom_Build_Package;
+  BEGIN {
+    eval q{ use base 'Module::Build::DistVersion'; };
+    eval q{ use base 'Module::Build'; } if $@;
+    die $@ if $@;
+  }
+  sub ACTION_distdir
+  {
+    my $self = shift @_;
+    print STDERR <<"END" unless $self->isa('Module::Build::DistVersion');
+  \a\a\a\n
+  This module uses Module::Build::DistVersion to automatically copy
+  version numbers to the appropriate places.  You might want to install
+  that and re-run Build.PL if you intend to create a distribution.
+  \n
+  END
+    $self->SUPER::ACTION_distdir(@_);
+  } # end ACTION_distdir
 
 
 =head1 DESCRIPTION
 
-=for author to fill in:
-    Write a full description of the module and its features here.
-    Use subsections (=head2, =head3) as appropriate.
+Module::Build::DistVersion is a subclass of L<Module::Build>.  It
+modifies the C<distdir> action to collect the version number and
+release date from the official locations and distribute them to the
+other places they should appear.
 
+Only the module maintainer (who creates distribution files and uploads
+them to CPAN) needs to install Module::Build::DistVersion.  Users who
+simply want to install the module only need to have the normal
+Module::Build installed.
 
-=head1 INTERFACE
-
-=for author to fill in:
-    Write a separate section listing the public components of the modules
-    interface. These normally consist of either subroutines that may be
-    exported, or methods that may be called on objects belonging to the
-    classes provided by the module.
-
-
-=head1 DIAGNOSTICS
-
-=for author to fill in:
-    List every single error and warning message that the module can
-    generate (even the ones that will "never happen"), with a full
-    explanation of each problem, one or more likely causes, and any
-    suggested remedies.
+When the C<distdir> action is executed, Module::Build::DistVersion
+does the following:
 
 =over
 
-=item C<< Error message here, perhaps with %s placeholders >>
+=item 1.
 
-[Description of error here]
+It opens the F<Changes> file, and finds the first version listed.  The
+line must begin with the version number, and everything after the
+version number is considered to be the release date.  The version
+number from Changes must match Module::Build's idea of the
+distribution version, or the process stops here with an error.
 
-=item C<< Another error message here >>
+=item 2.
 
-[Description of error here]
+It reads each file matching F<tools/*.tt> and processes it with
+Template Toolkit.  Each template file produces a file in the main
+directory.  For example, F<tools/README.tt> produces F<README>.  Any
+number of templates may be present.
 
-[Et cetera, et cetera]
+Each template may use the following variables:
+
+=over
+
+=item C<changes>
+
+The changes in the current release.  This is a string containing all
+lines in F<Changes> following the version/release date line up to (but
+not including) the next line that begins with a non-whitespace
+character (or end-of-file).
+
+=item C<date>
+
+The release date as it appeared in F<Changes>.
+
+=item C<version>
+
+The distribution's version number.
+
+=back
+
+=item 3.
+
+Module::Build's normal C<ACTION_distdir> method is run.
+
+=item 4.
+
+It finds each F<.pm> file in the distdir's F<lib> directory.  For each
+file, it finds the C<=head1 VERSION> line and replaces the first
+non-blank line following it.  The replacement text comes from running
+Template Toolkit on the string returned by the
+L<DV_pod_VERSION_template> method.  See that method for details.
+
+=back
+
+=head1 INTERFACE
+
+=head2 Overriden Module::Build methods
+
+Module::Build::DistVersion overrides the following Module::Build methods:
+
+=over
+
+=item C<ACTION_distdir>
+
+Operates as explained under L<"DESCRIPTION">.
+
+=item C<do_create_makefile_pl>
+
+Module::Build::Compat produces a Makefile.PL that requires the current
+build class.  This override hides Module::Build::DistVersion from
+Module::Build::Compat, so the generated Makefile.PL will require only
+Module::Build.
+
+If you subclass Module::Build::DistVersion, you may need to copy this
+method to your subclass.
+
+=back
+
+=head2 New methods in Module::Build::DistVersion
+
+In order to help ensure compatibility with future versions of
+Module::Build, all Module::Build::DistVersion-specific methods begin
+with C<DV_>.
+
+=over
+
+=item C<< $TT = $builder->DV_new_Template() >>
+
+Creates a new Template object.  You can override this if you want to
+change the parameters passed to it.  The default settings enable
+C<EVAL_PERL> and C<POST_CHOMP>.
+
+=item C<< ($RELEASE_DATE, $CHANGES) = $builder->DV_check_Changes() >>
+
+Extract information from F<Changes> as described in step 1.
+
+=item C<< $builder->DV_process_templates($RELEASE_DATE, $CHANGES) >>
+
+Process F<tools/*.tt> as described in step 2.
+
+=item C<< $builder->DV_update_pod_versions($RELEASE_DATE) >>
+
+Update VERSION sections as described in step 4.
+
+=item C<< $builder->DV_update_pod_version($FILENAME, $TT, $TEMPLATE, $DATA_REF) >>
+
+Update a single module's VERSION section (used by C<DV_update_pod_versions>).
+
+=item C<< $builder->DV_pod_VERSION_template($PM_FILES_REF) >>
+
+Returns the template for a module's version section.  First, it calls
+Module::Build's notes method with the key C<DV_pod_VERSION>.  If that
+key is defined, its value is the template.
+
+If the F<Build.PL> hasn't specified a custom template in C<notes>, it
+returns the default template.  This depends on whether the
+distribution has multiple F<.pm> files:  either
+
+This document describes version [%version%] of [%module%], released
+[%date%].
+
+or
+
+This document describes version [%version%] of [%module%], released
+[%date%] as part of [%dist%] version [%dist_version%].
+
+The template may use the following variables:
+
+=over
+
+=item C<date>
+
+The release date as it appeared in F<Changes>.
+
+=item C<dist>
+
+The distribution's name.
+
+=item C<dist_version>
+
+The distribution's version.
+
+=item C<module>
+
+The module's name (as determined by Module::Build::ModuleInfo).
+
+=item C<version>
+
+The module's version number (as determined by Module::Build::ModuleInfo).
+
+=back
+
+(C<$PM_FILES_REF> is an array reference containing the list of F<.pm>
+files to be processed.)
+
+=back
+
+=head2 Normal subroutines
+
+=over
+
+=item C<< my $SAVE_STATS = DV_save_file_stats($FILENAME) >>
+
+Constructs an object whose destructor will restore the current
+modification time and access permissions of C<$FILENAME>.
+
+=back
+
+=head1 DIAGNOSTICS
+
+=over
+
+=item C<< ERROR: Can't find any versions in Changes >>
+
+We couldn't find anything that looked like a version line in F<Changes>.
+
+=item C<< ERROR: Can't find version in %s >>
+
+Module::Build::ModuleInfo couldn't find a version number in the
+specified file.
+
+=item C<< ERROR: Can't open %s: %s >>
+
+The specified file couldn't be opened.  The value of C<$!> is included.
+
+=item C<< ERROR: Can't open %s to determine version: %s >>
+
+Module::Build::ModuleInfo couldn't open the specified file.
+The value of C<$!> is included.
+
+=item C<< ERROR: Can't stat %s: %s >>
+
+We couldn't C<stat> the specified file.  The value of C<$!> is included.
+
+=item C<< ERROR: Changes begins with version %s, expected version %s >>
+
+The F<Changes> file didn't begin with the version that Module::Build
+is creating a distribution for.
+
+=item C<< ERROR: Changes contains no history for version %s >>
+
+We found the correct version in F<Changes>, but there weren't any
+lines following it to describe what the changes are.
+
+=item C<< ERROR: %s has no VERSION section >>
+
+We couldn't find a C<=head1 VERSION> line in the specified file.
+
+=item C<< ERROR: %s: Unexpected line %s >>
+
+We found a C<=head1 VERSION> section in the specified file, but the
+next non-blank line didn't match C</^This (?:section|document)/>.
 
 =back
 
@@ -364,37 +603,15 @@ Module::Build::DistVersion requires no configuration files or environment variab
 
 =head1 DEPENDENCIES
 
-=for author to fill in:
-    A list of all the other modules that this module relies upon,
-    including any restrictions on versions, and an indication whether
-    the module is part of the standard Perl distribution, part of the
-    module's distribution, or must be installed separately. ]
-
-None.
-
+L<Module::Build> 0.28 or later, L<Template> Toolkit 2, L<File::Spec>,
+and L<Tie::File>.
 
 =head1 INCOMPATIBILITIES
-
-=for author to fill in:
-    A list of any modules that this module cannot be used in conjunction
-    with. This may be due to name conflicts in the interface, or
-    competition for system or program resources, or due to internal
-    limitations of Perl (for example, many modules that use source code
-    filters are mutually incompatible).
 
 None reported.
 
 
 =head1 BUGS AND LIMITATIONS
-
-=for author to fill in:
-    A list of known problems with the module, together with some
-    indication Whether they are likely to be fixed in an upcoming
-    release. Also a list of restrictions on the features the module
-    does provide: data types that cannot be handled, performance issues
-    and the circumstances in which they may arise, practical
-    limitations on the size of data sets, special cases that are not
-    (yet) handled, etc.
 
 No bugs have been reported.
 
