@@ -2,13 +2,15 @@
 Module::Build::DistVersion version [%version%], released [%date%]
 
 
-[ REPLACE THIS...
+This is a subclass of Module::Build intended for module authors.
+It modifies the distdir action to collect the version number and
+release date from the official locations and distribute them to the
+other places they should appear.
 
-  The README is used to introduce the module and provide instructions on
-  how to install the module, any machine dependencies it may have (for
-  example C compilers and installed libraries) and any other information
-  that should be understood before the module is installed.
-]
+Only the module maintainer (who creates distribution files and uploads
+them to CPAN) needs to install Module::Build::DistVersion.  Users who
+simply want to install the module only need to have the normal
+Module::Build installed.
 
 
 
@@ -24,7 +26,10 @@ To install this module, run the following commands:
 
 DEPENDENCIES
 
-None.
+Module::Build 0.28 or later
+Template Toolkit 2
+File::Spec
+Tie::File
 
 
 

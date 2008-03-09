@@ -4,6 +4,7 @@
 \$$
 \.cmd$
 \.gz$
+\.tmp$
 ^\#
 ^MANIFEST\.
 ^Makefile$
