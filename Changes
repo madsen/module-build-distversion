@@ -1,4 +1,7 @@
 Revision history for Module::Build::DistVersion
 
-0.01   Feb 29 2008
+0.01   Apr 15 2008
 	- Initial release
+
+0.00   Feb 29 2008
+	- Module created
