@@ -1,5 +1,11 @@
 Revision history for Module::Build::DistVersion
 
+0.02   Apr 16 2008
+	- Added optional changes=N argument
+	- Don't index the tools directory
+	- Note that subclasses should "use Module::Build"
+	  before trying to load Module::Build::DistVersion
+
 0.01   Apr 15 2008
 	- Initial release
 

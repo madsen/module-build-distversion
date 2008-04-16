@@ -33,6 +33,9 @@ my $builder = Module::Build::DistVersion->new(
   },
   create_makefile_pl => 'passthrough',
   dynamic_config     => 0,
+  meta_merge         => {
+    no_index  => { dir => ['tools'] },
+  },
 );
 
 $builder->create_build_script();
