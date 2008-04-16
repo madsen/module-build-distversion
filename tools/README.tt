@@ -33,6 +33,14 @@ Tie::File
 
 
 
+CHANGES
+    Here's what's new in version [%version%] of Module::Build::DistVersion:
+    (See the file "Changes" for the full revision history.)
+
+[%changes%]
+
+
+
 COPYRIGHT AND LICENSE
 
 Copyright 2008 Christopher J. Madsen
