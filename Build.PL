@@ -34,7 +34,7 @@ my $builder = Module::Build::DistVersion->new(
   create_makefile_pl => 'passthrough',
   dynamic_config     => 0,
   meta_merge         => {
-    no_index  => { dir => ['tools'] },
+    no_index  => { directory => ['tools'] },
   },
 );
 

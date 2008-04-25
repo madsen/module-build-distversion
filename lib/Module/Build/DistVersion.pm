@@ -402,7 +402,7 @@ number of templates may be present.  If you ship the tools directory
 with your module (and I recommend you do), you should tell CPAN not to
 index it by including C<no_index> in your Build.PL parameters:
 
-  meta_merge => { no_index => { dir => ['tools'] } },
+  meta_merge => { no_index => { directory => ['tools'] } },
 
 Each template may use the following variables:
 
