@@ -1,5 +1,8 @@
 Revision history for Module::Build::DistVersion
 
+0.03   April 25, 2008
+	- Don't require =head1 VERSION if a module has no POD
+
 0.02   April 25, 2008
 	- Added optional changes=N argument
 	- Don't index the tools directory
