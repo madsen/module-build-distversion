@@ -1,6 +1,6 @@
 Revision history for Module::Build::DistVersion
 
-0.04   NOT
+0.04   December 24, 2010
 	- Module::Build::DistVersion is now deprecated.	 Its
 	  replacement is Dist::Zilla::Plugin::TemplateCJM.
 
