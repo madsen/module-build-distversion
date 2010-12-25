@@ -1,11 +1,11 @@
 Build.PL
 Changes
-lib/Module/Build/DistVersion.pm
-Makefile.PL
+LICENSE
 MANIFEST
+META.json
 META.yml
 README
+lib/Module/Build/DistVersion.pm
 t/00.load.t
-t/pod-coverage.t
-t/pod.t
-tools/README.tt
+t/release-pod-coverage.t
+t/release-pod-syntax.t

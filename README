@@ -1,5 +1,8 @@
-[% # $Id$ %]
-Module::Build::DistVersion version [%version%], released [%date%]
+Module::Build::DistVersion version {{$version}}, released {{$date}}
+
+
+THIS MODULE IS DEPRECATED.  I'm now using Dist::Zilla (and
+Dist::Zilla::Plugin::TemplateCJM) instead.
 
 
 This is a subclass of Module::Build intended for module authors.
@@ -18,32 +21,24 @@ INSTALLATION
 
 To install this module, run the following commands:
 
-	perl Build.PL
-	./Build
-	./Build test
-	./Build install
+{{ $t->build_instructions }}
+
 
 
 DEPENDENCIES
 
-Module::Build 0.28 or later
-Template Toolkit 2
-File::Spec
-Tie::File
+{{ $t->dependency_list }}
 
 
 
 CHANGES
-    Here's what's new in version [%version%] of Module::Build::DistVersion:
+    Here's what's new in version {{$version}} of Module::Build::DistVersion:
     (See the file "Changes" for the full revision history.)
 
-[%changes%]
+{{$changes}}
 
 
 
 COPYRIGHT AND LICENSE
 
-Copyright 2008 Christopher J. Madsen
-
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.
+{{ local $_ = $zilla->license->notice; chomp; $_ }}

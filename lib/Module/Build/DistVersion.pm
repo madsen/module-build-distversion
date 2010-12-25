@@ -5,7 +5,6 @@ package Module::Build::DistVersion;
 #
 # Author: Christopher J. Madsen <perl@cjmweb.net>
 # Created: February 29, 2008
-# $Id$
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the same terms as Perl itself.
@@ -15,7 +14,7 @@ package Module::Build::DistVersion;
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See either the
 # GNU General Public License or the Artistic License for more details.
 #
-# Copy module version numbers to secondary locations at Build distdir
+# ABSTRACT: Copy version numbers to secondary locations
 #---------------------------------------------------------------------
 
 use 5.008;
@@ -29,7 +28,7 @@ use base 'Module::Build';
 #=====================================================================
 # Package Global Variables:
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 #=====================================================================
 # Package Module::Build::DistVersion:
@@ -318,13 +317,20 @@ sub DESTROY
 
 __END__
 
-=head1 NAME
+=for Pod::Loom-insert_before
+WARNING
+SYNOPSIS
 
-Module::Build::DistVersion - Copy version numbers to secondary locations
+=head1 WARNING
 
-=head1 VERSION
+B<This module is deprecated.> L<Dist::Zilla> provides a much more
+flexible way to transform your distribution's files at release time.
+L<Dist::Zilla::Plugin::TemplateCJM> is the replacement for this module,
+although it uses a different template syntax.
 
-This section is filled in by C<Build distdir>.
+You can see an example of converting a dist from
+Module::Build::DistVersion to Dist::Zilla at
+L<{{ $meta{resources}{repository}{web} }}>.
 
 
 =head1 SYNOPSIS
@@ -667,45 +673,3 @@ None reported.
 =head1 BUGS AND LIMITATIONS
 
 No bugs have been reported.
-
-
-=head1 AUTHOR
-
-Christopher J. Madsen  S<< C<< <perl AT cjmweb.net> >> >>
-
-Please report any bugs or feature requests to
-S<< C<< <bug-Module-Build-DistVersion AT rt.cpan.org> >> >>,
-or through the web interface at
-L<http://rt.cpan.org/Public/Bug/Report.html?Queue=Module-Build-DistVersion>
-
-
-=head1 LICENSE AND COPYRIGHT
-
-Copyright 2008 Christopher J. Madsen
-
-This module is free software; you can redistribute it and/or
-modify it under the same terms as Perl itself. See L<perlartistic>.
-
-
-=head1 DISCLAIMER OF WARRANTY
-
-BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
-FOR THE SOFTWARE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN
-OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES
-PROVIDE THE SOFTWARE "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
-EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE
-ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH
-YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL
-NECESSARY SERVICING, REPAIR, OR CORRECTION.
-
-IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
-WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR
-REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENSE, BE
-LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL,
-OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE
-THE SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING
-RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A
-FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF
-SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
-SUCH DAMAGES.

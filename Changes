@@ -1,5 +1,9 @@
 Revision history for Module::Build::DistVersion
 
+0.04   NOT
+	- Module::Build::DistVersion is now deprecated.	 Its
+	  replacement is Dist::Zilla::Plugin::TemplateCJM.
+
 0.03   April 25, 2008
 	- Don't require =head1 VERSION if a module has no POD
 

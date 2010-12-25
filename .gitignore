@@ -1,0 +1,11 @@
+/blib/
+/META.yml
+/MYMETA.yml
+/.build/
+/_build/
+Build
+Makefile
+/pm_to_blib
+Module-Build-DistVersion-*.tar.gz
+Module-Build-DistVersion-*/
+/test-results/
